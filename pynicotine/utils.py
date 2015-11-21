@@ -316,3 +316,71 @@ def strace(function):
 		return retvalue
 	return newfunc
 
+## Check selected files if they form a full album
+# @param List of files in a purported album
+# @return (file extension, number of files, subdirectory) or None
+def checkAlbum(selected):
+# TODO: handle numbers in titles by estimating placement of track #
+# TODO: handle multi-disc albums by looking for track numbers > 100
+
+    subdir = None
+
+    ext_histo = dict()
+    fnames = map (lambda x : x[1], selected)
+    for f in fnames:
+            ext = f[-3:]
+            if ext not in ext_histo:
+                    ext_histo[ext] = 0
+            ext_histo[ext] = ext_histo[ext] + 1
+
+    # (number of elems, extension)
+    (max_c, max_ext) = max(map(lambda (a, b): (b,a), ext_histo.items()))
+    print 'Max element'
+    print (max_c, max_ext)
+
+    # filter out '-' and '_' separators
+    fnames_spaced = map(lambda x : x.replace('-', ' '), fnames)
+    fnames_spaced = map(lambda x : x.replace('_', ' '), fnames_spaced)
+    fnames_spaced = map(lambda x : x.replace('\\', ' '), fnames_spaced)
+    fnames_spaced = map(lambda x : x.replace('.', ' '), fnames_spaced)
+
+    # get track numbers
+    tokens = ' '.join((filter(lambda x : x[-3:] == max_ext, fnames_spaced))).split(' ')
+    # limit number ot tracks to 80
+    tracks = filter(lambda x : x < 80, map(lambda x : abs(int(x)), filter (lambda x : x.isdigit(), tokens)))
+
+    if not tracks or len(tracks) == 0:
+            print 'No tracks found in selected list. Huh'
+            print fnames
+            print 'What went wrong?'
+            print 'Spaced'
+            print fnames_spaced
+            return None
+
+    # find the max value for the first contiguous extent
+    # e.g., 1,2,3,4,6,10 will give 4
+    max_track_seq = reduce(lambda x,y : y if x + 1 == y else x, sorted(tracks))
+    if max_track_seq != max_c:
+            print 'Max track not equal to max extension in histo. Bail out'
+            return None
+
+    print 'File list verified. Happy downloading.'
+
+    for file in selected:
+            try:
+                subdir = file[1].rsplit("\\", 1)[0].rsplit("\\", 1)[1]
+            except:
+                subdir = None
+            if subdir is not None:
+                print '+Mode: Got subdir ' + subdir
+                break
+
+    return (max_ext, max_c, subdir)
+
+## Create integrity file for full album
+# @param album directory 
+# @param checked album data
+def createAlbumIntegrity(d, albumDat):
+    f = open(d + '/TRACK_COUNT', 'w')
+    f.write(str(albumDat[1]) + ' ' + str(albumDat[0]))
+    f.close()

@@ -975,7 +975,54 @@ class Transfers:
 		if not tablabel:
 			return
 		tablabel.set_image(frame.images["online"])
-		
+	
+	def checkTrackCompletion(self, folder):
+		try:
+			print 'opening TRACK_COUNT in ' + folder
+			f = open(folder + '/TRACK_COUNT', 'r')
+			s = f.read()
+			print 'Got Track Count File: ' + s
+			r = s.split(' ')
+
+			c = int(r[0])
+			if c == 0:
+				print 'Bogus track count of 0'
+				return
+
+			ext = r[1]
+			print 'got ext ' + ext
+			print 'ext len ' + str(len(ext))
+			print 'got count ' + str(c)
+     
+     			try:
+				print 'getting files for ' + folder
+				files = os.listdir(folder)
+				print 'Got files ' + str(files)
+			except:
+				print "Couldn't list dir on " + folder
+				return
+
+			print 'finding matches on ' + str(files)
+			matches = filter ( lambda x : x[-3:] == ext, files )
+			if not matches:
+				print 'No matches'
+				return
+
+			if len(matches) != c:
+				print 'Did not have enough matches on ' + folder + ' ' +  str(len(matches)) + ' / ' + str(c)
+				f.close()
+				return
+
+			print 'Full matches on ' + folder + ' ' +  str(len(matches)) + ' / ' + str(c)
+			os.unlink(folder + '/TRACK_COUNT')
+			f = open(folder + '/COMPLETE', 'w')
+			f.close()
+		except:
+			print 'No track count found in ' + folder
+			return
+
+
+
 	def FileDownload(self, msg):
 		""" A file download is in progress"""
 		needupdate = True
@@ -1056,6 +1103,9 @@ class Transfers:
 					self.downloadspanel.update(i)
 					if config["transfers"]["shownotification"]:
 						self.eventprocessor.frame.NewNotification(_("%(file)s downloaded from %(user)s") % {'user':i.user, "file":newname.rsplit(os.sep, 1)[1]}, title=_("Nicotine+ :: file downloaded"))
+
+					if newname:
+                                        	self.checkTrackCompletion(folder)
 
 					if newname and config["transfers"]["afterfinish"]:
 						if not executeCommand(config["transfers"]["afterfinish"], newname):

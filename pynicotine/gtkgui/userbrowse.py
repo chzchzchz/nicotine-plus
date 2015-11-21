@@ -30,7 +30,7 @@ from dirchooser import ChooseDir
 from entrydialog import *
 from pynicotine import slskmessages
 from thread import start_new_thread
-from pynicotine.utils import _, displayTraceback, executeCommand, CleanFile
+from pynicotine.utils import _, displayTraceback, executeCommand, CleanFile, checkAlbum, createAlbumIntegrity
 from uglytree import UglyTree
 
 class UserBrowse:
@@ -119,6 +119,7 @@ class UserBrowse:
 		self.popup_menu_downloads_files = PopupMenu(self.frame)
 		self.popup_menu_downloads_files.setup( 
 			("#" + _("_Download file(s)"), self.OnDownloadFiles, gtk.STOCK_GO_DOWN),
+			("#" + _("_+ Download file(s) to..."), self.OnDownloadFilesToPlus, gtk.STOCK_GO_DOWN),
 			("#" + _("Download _to..."), self.OnDownloadFilesTo, gtk.STOCK_GO_DOWN),
 			("", None),
 			("#" + _("_Download directory"), self.OnDownloadDirectory, gtk.STOCK_GO_DOWN),
@@ -657,6 +658,27 @@ class UserBrowse:
 					rl = 0
 				length = "%i:%02i" % (int(rl // 60), rl % 60)
 			self.frame.np.transfers.getFile(self.user, path, prefix, size=size, bitrate=bitrate, length=length)
+
+	def OnDownloadFilesToPlus(self, widget):
+		files = self.DirStore.GetData(self.DirStore.on_get_iter(self.selected_folder))
+                checkAlbumDat = checkAlbum(files)
+                if checkAlbumDat is None:
+                    return
+
+                dir = ChooseDir(
+                    self.frame.MainWindow,
+                    self.frame.np.config.sections["transfers"]["downloaddir"],
+                    create=True,
+                    name=checkAlbumDat[2])
+		if dir is None:
+                    return
+
+		if len(dir) < 1:
+                    return
+
+                createAlbumIntegrity(dir[0], checkAlbumDat)
+
+		self.OnDownloadFiles(widget, dir[0])
 
 	def OnUploadDirectoryRecursiveTo(self, widget):
 		self.OnUploadDirectoryTo(widget, recurse=1)

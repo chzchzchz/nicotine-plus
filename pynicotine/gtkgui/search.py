@@ -31,7 +31,7 @@ from pynicotine import slskmessages
 from utils import InitialiseColumns, IconNotebook, PopupMenu, FastListModel, Humanize, HumanSpeed, HumanSize, PressHeader
 from dirchooser import ChooseDir
 from entrydialog import *
-from pynicotine.utils import _
+from pynicotine.utils import _, checkAlbum, createAlbumIntegrity
 from utils import InputDialog, showCountryTooltip
 from pynicotine.logfacility import log
 
@@ -628,6 +628,7 @@ class Search:
 		popup.setup(
 			("#" + _("_Download file(s)"), self.OnDownloadFiles, gtk.STOCK_GO_DOWN),
 			("#" + _("Download file(s) _to..."), self.OnDownloadFilesTo, gtk.STOCK_GO_DOWN),
+			("#" + _("_+ Download file(s) to..."), self.OnDownloadFilesToPlus, gtk.STOCK_GO_DOWN),
 			("#" + _("Download containing _folder(s)"), self.OnDownloadFolders, gtk.STOCK_GO_DOWN),
 			("#" + _("Download containing f_older(s) to..."), self.OnDownloadFoldersTo, gtk.STOCK_GO_DOWN),
 			("#" + _("View Metadata of file(s)"), self.OnSearchMeta, gtk.STOCK_PROPERTIES),
@@ -1273,7 +1274,26 @@ class Search:
 		for dirs in dir:
 			self.OnDownloadFiles(widget, dirs)
 			break
-	
+
+	def OnDownloadFilesToPlus(self, widget):
+                checkAlbumDat = checkAlbum(self.selected_results)
+                if checkAlbumDat is None:
+                    return
+
+                dir = ChooseDir(
+                    self.frame.MainWindow,
+                    self.frame.np.config.sections["transfers"]["downloaddir"],
+                    create=True,
+                    name=checkAlbumDat[2])
+		if dir is None:
+                    return
+
+		if len(dir) < 1:
+                    return
+
+                createAlbumIntegrity(dir[0], checkAlbumDat)
+		self.OnDownloadFiles(widget, dir[0])
+
 	def OnDownloadFolders(self, widget):
 		folders = []
 		for i in self.selected_results:
